@@ -1,0 +1,65 @@
+version: "3.8"
+
+services:
+  airflow:
+    image: quay.io/astronomer/astro-runtime:latest
+    container_name: airflow
+    ports:
+      - "8080:8080"
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=CeleryExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/airflow.db
+    volumes:
+      - ./airflow:/opt/airflow
+    networks:
+      - airflow-airbyte-net
+    restart: always
+
+  airbyte-server:
+    image: airbyte/server:latest
+    container_name: airbyte-server
+    ports:
+      - "8000:8000"
+    networks:
+      - airflow-airbyte-net
+    restart: always
+
+  airbyte-db:
+    image: postgres:latest
+    container_name: airbyte-db
+    environment:
+      POSTGRES_USER: airbyte
+      POSTGRES_PASSWORD: airbyte
+      POSTGRES_DB: airbyte
+    networks:
+      - airflow-airbyte-net
+    restart: always
+
+  airbyte-worker:
+    image: airbyte/worker:latest
+    container_name: airbyte-worker
+    networks:
+      - airflow-airbyte-net
+    restart: always
+
+  airbyte-scheduler:
+    image: airbyte/scheduler:latest
+    container_name: airbyte-scheduler
+    networks:
+      - airflow-airbyte-net
+    restart: always
+
+  airbyte-webapp:
+    image: airbyte/webapp:latest
+    container_name: airbyte-webapp
+    depends_on:
+      - airbyte-server
+    ports:
+      - "8001:80"
+    networks:
+      - airflow-airbyte-net
+    restart: always
+
+networks:
+  airflow-airbyte-net:
+    driver: bridge
